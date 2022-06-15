@@ -1,6 +1,8 @@
-let fs = require("fs")
-let vm = require('vm')
-vm.runInThisContext(fs.readFileSync(__dirname + "/../../1-module/3-task/index.js"))
+var el = document.createElement('script');
+el.async = false;
+el.src = "/../../1-module/3-task/index.js";
+el.type = 'text/javascript';
+
 
 function camelize(str) {
   let arr = str.split("-");
