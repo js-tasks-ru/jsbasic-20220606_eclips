@@ -12,15 +12,7 @@ function shiftCarousel(shift) {
     oldShift      = Number(oldShift[0]);
     shiftCurrEl  += oldShift;
     wrapper.style.transform = `translateX(${shiftCurrEl}px)`;
-  // [...wrapper.children].forEach( (carousel) => {
-  //   let shiftCurrEl   = shift;
-  //   let transformText = carousel.style.transform;
-  //   transformText = transformText == "" ? "0" : transformText;
-  //   oldShift      = transformText.match(/-?(\d+)/g);
-  //   oldShift      = Number(oldShift[0]);
-  //   shiftCurrEl  += oldShift;
-  //   carousel.style.transform = `translateX(${shiftCurrEl}px)`;
-  // } );
+
 }
 
 function initCarousel() {
