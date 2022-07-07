@@ -6,12 +6,14 @@ export default class StepSlider {
   #thumb;
   #progress;
   #value;
+  #currentStep;
   #count;
 
   constructor({ steps, value = 0 }) {
     this.onmousedown = this.onmousedown.bind(this);
     this.onmouseup   = this.onmouseup.bind(this);
     this.onclick     = this.onclick.bind(this);
+    this.onmousemove = this.onmousemove.bind(this);
 
     this.render(steps);
     this.#thumb   = this.elem.querySelector('.slider__thumb');
@@ -50,12 +52,16 @@ export default class StepSlider {
 
   onmousedown(event) {
     this.onmousemove(event);
-    this.onmousemove = this.onmousemove.bind(this);
     this.elem.addEventListener('mousemove', this.onmousemove);
   }
 
   onmouseup(event) {
     this.elem.removeEventListener('mousemove', this.onmousemove);
+    const customEvent = new CustomEvent('slider-change', {
+      detail: this.#currentStep,
+      bubbles: true // событие всплывает - это понадобится в дальнейшем
+    });
+    this.elem.dispatchEvent(customEvent);    
   }
 
   onmousemove(event) {
@@ -66,16 +72,10 @@ export default class StepSlider {
     let percentX    = (shiftX / clientRect.width) * 100;
     let oneStep        = 100 / this.#count;
     let closestStep    = Math.round(percentX / oneStep);
+    this.#currentStep  = closestStep;
     let percentXrounded    = closestStep * oneStep;
 
     this.renderSliderPosition(percentXrounded, closestStep);
-
-    const customEvent = new CustomEvent('slider-change', {
-      detail: closestStep,
-      bubbles: true // событие всплывает - это понадобится в дальнейшем
-    });
-    this.elem.dispatchEvent(customEvent);
-
   }
 
   renderSliderPosition(percentXrounded, step) {
