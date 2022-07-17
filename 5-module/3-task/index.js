@@ -8,7 +8,7 @@ function shiftCarousel(shift) {
     let shiftCurrEl   = shift;
     let transformText = wrapper.style.transform;
     transformText = transformText == "" ? "0" : transformText;
-    oldShift      = transformText.match(/-?(\d+)/g);
+    let oldShift      = transformText.match(/-?(\d+)/g);
     oldShift      = Number(oldShift[0]);
     shiftCurrEl  += oldShift;
     wrapper.style.transform = `translateX(${shiftCurrEl}px)`;

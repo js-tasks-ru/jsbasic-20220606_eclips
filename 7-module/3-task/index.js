@@ -1,5 +1,9 @@
 import createElement from '../../assets/lib/create-element.js';
 
+const SLIDER_STEP_ACTIVE = 'slider__step-active';
+const SLIDER_CHANGE_EVENT = 'slider-change';
+const SLIDER_DRAGGING_EVENT = 'slider_dragging';
+
 export default class StepSlider {
 
   elem;
@@ -7,28 +11,27 @@ export default class StepSlider {
   #progress;
   #value;
   #currentStep;
-  #count;
+  #segments;
+  #steps;
 
-  constructor({ steps, value = 0 }) {
-    this.onmousedown = this.onmousedown.bind(this);
-    this.onmouseup   = this.onmouseup.bind(this);
-    this.onclick     = this.onclick.bind(this);
-    this.onmousemove = this.onmousemove.bind(this);
-
-    this.render(steps);
-    this.#thumb   = this.elem.querySelector('.slider__thumb');
-    this.#value   = this.elem.querySelector('.slider__value');
-    this.#progress= this.elem.querySelector('.slider__progress');
-    this.#count   = steps-1;
-    this.renderSliderPosition(value * (100 / this.#count), value);
-    this.elem.addEventListener('mousedown', this.onmousedown);
-    document.addEventListener('click', this.onclick);
-    document.addEventListener('mouseup'  , this.onmouseup);
-
-
+  sub(ref) {
+    return this.elem.querySelector(`.slider__${ref}`);
   }
 
-  render(steps) {
+  constructor({ steps, value = 0 }) {
+    this.#steps      = steps;
+    this.#segments   = steps-1;
+    this.render = this.render.bind(this);
+    this.render();
+    this.#thumb   = this.sub('thumb');
+    this.#value   = this.sub('value');
+    this.#progress= this.sub('progress');
+
+    this.addEventListeners();
+    this.setValue(value);
+  }
+
+  render() {
     this.elem = createElement(`<div class="slider">
       <!--Ползунок слайдера с активным значением-->
       <div class="slider__thumb">
@@ -39,51 +42,88 @@ export default class StepSlider {
       <div class="slider__progress"></div>
       <!-- Шаги слайдера (вертикальные чёрточки) -->
       <div class="slider__steps">
-        <span class="slider__step-active"></span>
       </div>
   </div>`);
-  const sliderSteps = this.elem.querySelector('.slider__steps');
-  [...Array(steps-1).keys()].forEach( (index) => sliderSteps.appendChild(createElement(`<span></span>`)) );
+  const sliderSteps = this.sub('steps');
+  [...Array(this.#steps).keys()].forEach( (index) => sliderSteps.appendChild(createElement(`<span></span>`)) );
+  sliderSteps.children[0].classList.add(SLIDER_STEP_ACTIVE);
   }
 
-  onclick(event) { //for tests
-    this.onmousemove(event);
+  addEventListeners() {
+    this.#thumb.ondragstart = () => false;
+    this.onpointerdown = this.onpointerdown.bind(this);
+    this.onpointerup   = this.onpointerup.bind(this);
+    this.onpointermove = this.onpointermove.bind(this);
+    this.onclick       = this.onclick.bind(this);
+    this.setValue      = this.setValue.bind(this);
+
+    this.#thumb.onpointerdown = this.onpointerdown;
+    this.elem.onclick         = this.onclick;
   }
 
-  onmousedown(event) {
-    this.onmousemove(event);
-    this.elem.addEventListener('mousemove', this.onmousemove);
-  }
-
-  onmouseup(event) {
-    this.elem.removeEventListener('mousemove', this.onmousemove);
-    const customEvent = new CustomEvent('slider-change', {
-      detail: this.#currentStep,
+  createNewEvent(detail) {
+    return new CustomEvent(SLIDER_CHANGE_EVENT, {
+      detail: detail,
       bubbles: true // событие всплывает - это понадобится в дальнейшем
     });
-    this.elem.dispatchEvent(customEvent);    
   }
 
-  onmousemove(event) {
-    const clientRect = this.elem.getBoundingClientRect();
-    let shiftX     = event.clientX - clientRect.left;
-    shiftX = shiftX < 0 ? 0 : shiftX;
-    shiftX = shiftX > clientRect.width ? clientRect.width : shiftX;
-    let percentX    = (shiftX / clientRect.width) * 100;
-    let oneStep        = 100 / this.#count;
-    let closestStep    = Math.round(percentX / oneStep);
-    this.#currentStep  = closestStep;
-    let percentXrounded    = closestStep * oneStep;
+  onclick(event) {
+    let newStep = this.calcNewStep(event);
+    this.setValue(Math.round(this.#segments * newStep));
 
-    this.renderSliderPosition(percentXrounded, closestStep);
+    const customEvent = this.createNewEvent(this.#currentStep);
+    this.elem.dispatchEvent(customEvent);
   }
 
-  renderSliderPosition(percentXrounded, step) {
-    this.#thumb.style.left = percentXrounded + "%";
-    this.#progress.style.width = percentXrounded + "%";
-    this.#value.innerHTML = step;
+  onpointerdown(event) {
+    event.preventDefault();
+    this.elem.classList.add(SLIDER_DRAGGING_EVENT);
+    document.addEventListener('pointermove', this.onpointermove);
+    document.addEventListener('pointerup'  , this.onpointerup);
   }
 
+  onpointerup(event) {
+    document.removeEventListener('pointermove', this.onpointermove);
+    document.removeEventListener('pointerup', this.onpointerup);
+    this.elem.classList.remove(SLIDER_DRAGGING_EVENT);
 
+    const customEvent = this.createNewEvent(this.#currentStep);
+    this.elem.dispatchEvent(customEvent);
+  }
 
+  onpointermove(event) {
+    event.preventDefault();
+    let newStep = this.calcNewStep(event);
+    this.#currentStep = Math.round(this.#segments * newStep);
+    let percentX = newStep * 100;
+    this.renderProgressBar(percentX, this.#currentStep);
+  }
+
+  setValue(value) {
+    this.#currentStep  = value;
+    let percentX = (value / this.#segments) * 100;
+    const stepActive = this.sub('step-active');
+    if(stepActive) {
+      stepActive.classList.remove(SLIDER_STEP_ACTIVE);
+    }
+    const steps = this.sub('steps');
+    steps.children[Math.min(value, this.#steps)].classList.add(SLIDER_STEP_ACTIVE);
+
+    this.renderProgressBar(percentX, value);
+  }
+
+  calcNewStep(event) {
+    let newStep = (event.clientX - this.elem.getBoundingClientRect().left) / this.elem.offsetWidth;
+    if (newStep < 0) { newStep = 0; }
+    if (newStep > 1) { newStep = 1; }
+    return newStep;
+  }
+
+  renderProgressBar(percentX, value) {
+    this.#thumb.style.left = percentX + "%";
+    this.#progress.style.width = percentX + "%";
+    this.#value.innerHTML = value;
+  }
+  
 }
