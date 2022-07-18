@@ -88,7 +88,7 @@ describe('5-module-3-task', () => {
     carouselArrowLeft = carouselWrapper.querySelector('.carousel__arrow_left');
 
     clickEvent = new MouseEvent('click', { bubbles: true });
-
+    
     initCarousel();
   });
 
@@ -97,10 +97,11 @@ describe('5-module-3-task', () => {
   });
 
 
-  describe('переключение вперёд', () => {
-    it('при клике по кнопке "вперёд", должна переключать на один слайд вперёд', () => {
-      carouselArrowRight.dispatchEvent(clickEvent);
+  describe('переключение вперёд', ()=> {
 
+    it('при клике по кнопке "вперёд", должна переключать на один слайд вперёд', ()=>  {
+      carouselArrowRight.dispatchEvent(clickEvent);
+      
       expect(carouselInner.style.transform).toBe("translateX(-500px)");
     });
   });
